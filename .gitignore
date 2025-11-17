@@ -1,0 +1,11 @@
+# Python
+.venv/
+*.pyc
+__pycache__/
+
+# MLflow
+mlruns/
+
+# Logs
+*.log
+prediction_log.csv
