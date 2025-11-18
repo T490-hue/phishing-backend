@@ -11,19 +11,18 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4   # 🔥 UPDATED
+      uses: actions/checkout@v4
 
     - name: Debug workspace
       run: |
-        echo "================ WORKSPACE DEBUG START ================"
+        echo "===== WORKSPACE DEBUG ====="
         pwd
         ls -R .
         echo "--- requirements.txt:"
         cat requirements.txt || true
-        echo "================ WORKSPACE DEBUG END ================="
 
     - name: Set up Python
-      uses: actions/setup-python@v5   # 🔥 UPDATED
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
@@ -36,6 +35,7 @@ jobs:
     - name: Run tests
       run: pytest -v
 
+
   train-and-build:
     needs: test-backend
     runs-on: ubuntu-latest
@@ -43,19 +43,18 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4   # 🔥 UPDATED
+      uses: actions/checkout@v4
 
     - name: Debug workspace before training
       run: |
-        echo "================ TRAIN WORKSPACE DEBUG START ================"
+        echo "===== TRAIN WORKSPACE DEBUG ====="
         pwd
         ls -R .
         echo "--- requirements.txt:"
         cat requirements.txt || true
-        echo "================ TRAIN WORKSPACE DEBUG END ================="
 
     - name: Set up Python
-      uses: actions/setup-python@v5   # 🔥 UPDATED
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
@@ -64,23 +63,23 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install httpx
-	
+
     - name: Download phishing dataset (GitHub Release)
       run: |
-         mkdir -p data
-         wget -O data/phishing_email.csv "https://github.com/T490-hue/phishing-backend/releases/download/v1.0.0/phishing_email.csv"
+        mkdir -p data
+        wget -O data/phishing_email.csv "https://github.com/T490-hue/phishing-backend/releases/download/v1.0.0/phishing_email.csv"
 
     - name: Train hybrid phishing model
       run: python train-hybrid.py
 
     - name: Upload model artifact
-      uses: actions/upload-artifact@v4    # 🔥 CORRECT
+      uses: actions/upload-artifact@v4
       with:
         name: phishing_model
         path: phishing_model.joblib
 
     - name: Log in to Docker Hub
-      uses: docker/login-action@v3   # 🔥 UPDATED (v2 deprecated)
+      uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
