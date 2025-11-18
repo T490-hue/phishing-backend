@@ -5,31 +5,28 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch: {}
 
 jobs:
-
-  # -------------------------------
-  # 1) TEST BACKEND
-  # -------------------------------
   test-backend:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Python
+    - name: Set up Python 3.10
       uses: actions/setup-python@v4
       with:
         python-version: "3.10"
 
-    - name: Install backend dependencies
+    - name: Install dependencies
       run: |
         cd phishing-backend
+        python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest pytest-cov httpx
 
-    - name: Run backend tests
+    - name: Run tests
       run: |
         cd phishing-backend
         pytest -v --cov=. --cov-report=xml
@@ -40,16 +37,12 @@ jobs:
         file: ./phishing-backend/coverage.xml
         flags: backend
 
-  # -------------------------------
-  # 2) BUILD & PUSH DOCKER IMAGE
-  # -------------------------------
   build-and-push:
-    needs: [test-backend]
+    needs: test-backend
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-
     steps:
-    - name: Checkout repository
+    - name: Checkout repo
       uses: actions/checkout@v3
 
     - name: Log in to Docker Hub
@@ -70,17 +63,46 @@ jobs:
         docker push ${{ secrets.DOCKER_USERNAME }}/phishing-api:latest
         docker push ${{ secrets.DOCKER_USERNAME }}/phishing-api:${{ github.sha }}
 
-  # -------------------------------
-  # 3) DEPLOY
-  # -------------------------------
-  deploy:
-    needs: build-and-push
+  train-model:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
+    if: github.event_name == 'workflow_dispatch'
+    needs: test-backend
     steps:
-    - name: Deploy to server
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install deps and kaggle
       run: |
-        echo "Connect to server and pull new Docker image"
-        # Example:
-        # ssh user@server 'docker pull username/phishing-api:latest && docker compose up -d'
+        cd phishing-backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install kaggle
+
+    - name: Configure Kaggle
+      env:
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+        KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+      run: |
+        mkdir -p ~/.kaggle
+        echo "{\"username\":\"${KAGGLE_USERNAME}\",\"key\":\"${KAGGLE_KEY}\"}" > ~/.kaggle/kaggle.json
+        chmod 600 ~/.kaggle/kaggle.json
+
+    - name: Download dataset
+      run: |
+        cd phishing-backend
+        kaggle datasets download -d subhajournal/phishingemails -p data --unzip
+
+    - name: Run training
+      run: |
+        cd phishing-backend
+        python3 train-hybrid.py
+
+    - name: Upload model artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: phishing-model
+        path: phishing-backend/phishing_model.joblib
