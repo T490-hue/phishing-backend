@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline (Debug Mode)
 
 on:
   push:
@@ -13,6 +13,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    # 🔍 DEBUG: PRINT THE DIRECTORY STRUCTURE
+    - name: Debug workspace
+      run: |
+        echo "================ WORKSPACE DEBUG START ================"
+        echo "Current Directory:"
+        pwd
+        echo
+        echo "List all files and folders recursively:"
+        ls -R .
+        echo
+        echo "Show requirements.txt content (if found):"
+        find . -name "requirements.txt" -exec echo "--- {}:" \; -exec cat {} \;
+        echo "================ WORKSPACE DEBUG END ================="
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -22,7 +36,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest
+        pip install pytest httpx
 
     - name: Run tests
       run: |
@@ -37,6 +51,15 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    # 🔍 DEBUG: PRINT WORKSPACE BEFORE TRAINING
+    - name: Debug workspace before training
+      run: |
+        echo "================ TRAIN WORKSPACE DEBUG START ================"
+        pwd
+        ls -R .
+        find . -name "requirements.txt" -exec echo "--- {}:" \; -exec cat {} \;
+        echo "================ TRAIN WORKSPACE DEBUG END ================="
+
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
@@ -46,6 +69,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install httpx
 
     # 🔥 DOWNLOAD DATASET FROM GOOGLE DRIVE
     - name: Download phishing dataset (Google Drive)
