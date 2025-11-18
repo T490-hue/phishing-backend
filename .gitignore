@@ -8,4 +8,4 @@ mlruns/
 
 # Logs
 *.log
-prediction_log.csv
+prediction_log.csvdata/*.csv
