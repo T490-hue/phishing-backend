@@ -1,132 +1,247 @@
-# Phishing Detection MLOps Backend
+Hybrid Phishing Detection System
 
-This repository contains the complete MLOps backend for our Phishing Detection System. It's responsible for training the model, serving it as an API, and monitoring it for drift.
+Email and Website Based Phishing Classification
+Version 2.0
 
-This system is built with **FastAPI**, **Docker**, and **MLflow**.
+Overview
 
----
+This project builds and serves a hybrid phishing detection model that analyzes two types of inputs:
 
-## 🚀 What Each File Does
+Website-based numerical features (UCI Phishing Websites Dataset)
 
-* **`train.py`**: (Modules 1-4, 12) Loads the UCI dataset, trains the `LogisticRegression` model, logs it with MLflow, and saves `phishing_model.joblib` and `model_columns.joblib`.
-* **`main.py`**: (Modules 5, 7) The FastAPI server. It loads the model, handles CORS, and creates the `/predict` endpoint. It also logs every prediction to `prediction_log.csv`.
-* **`check_drift.py`**: (Module 11) The monitoring script. It compares `prediction_log.csv` against the original training data to detect model drift.
-* **`Dockerfile`**: (Module 6) The blueprint to package the entire FastAPI application into a portable Docker container.
-* **`requirements.txt`**: A list of all Python libraries needed for the project.
+Email text–based phishing indicators (Phishing_Email.csv)
 
----
+The system combines both datasets into one unified training pipeline and produces a single machine-learning model that can detect phishing attempts from either source.
 
-## ⚙️ How to Run This Project (Step-by-Step)
+The project includes:
 
-Follow these steps exactly to get the backend server running.
+A hybrid training script (train-hybrid.py)
 
-### 1. Set Up the Environment
+FastAPI backend for prediction (main_email.py)
 
-First, clone the repository and set up the Python virtual environment.
+Dockerized API
 
-```bash
-# Clone the repo (if you haven't)
-# git clone ...
+CI/CD pipeline using GitHub Actions (ci.yml)
 
-# Create a virtual environment
-python -m venv .venv
+1. Project Structure
 
-# Activate it (on Mac/Linux)
-source .venv/bin/activate
-# (on Windows, use: .\.venv\Scripts\activate)
+phishing-backend/
+│
+├── main_email.py               # FastAPI application
+├── train-hybrid.py             # Hybrid model training script
+├── phishing_model.joblib       # Trained model (generated)
+├── model_columns.joblib        # Feature column order for prediction
+├── email_scaler.joblib         # Scaler for email features
+├── prediction_log.csv          # Saved logs of predictions
+├── requirements.txt
+├── Dockerfile
+└── .github/workflows/ci.yml    # GitHub Actions pipeline
 
-# Install all required libraries
-pip install -r requirements.txt
+2. What Each File Does
+main_email.py (FastAPI App)
 
-You're right, a README.md file is the perfect way to do this. This is the most important file for team collaboration.
+This file runs the API that accepts inputs and returns phishing predictions.
 
-Here are two complete README.md files, one for each of your new repositories. Just copy and paste this text into a new file named README.md in each project.
+Key features:
 
-1. For phishing-backend (Your Python Project)
-Create a new file named README.md in your phishing-mlops-project folder and paste this in:
+Two prediction endpoints:
 
-Markdown
+/predict/website
 
-# Phishing Detection MLOps Backend
+/predict/email
 
-This repository contains the complete MLOps backend for our Phishing Detection System. It's responsible for training the model, serving it as an API, and monitoring it for drift.
+Extracts 20+ handcrafted email features
 
-This system is built with **FastAPI**, **Docker**, and **MLflow**.
+Applies scaling and converts to -1, 0, 1 buckets
 
----
+Reorders features exactly as the model was trained
 
-## 🚀 What Each File Does
+Generates predictions with confidence scores
 
-* **`train.py`**: (Modules 1-4, 12) Loads the UCI dataset, trains the `LogisticRegression` model, logs it with MLflow, and saves `phishing_model.joblib` and `model_columns.joblib`.
-* **`main.py`**: (Modules 5, 7) The FastAPI server. It loads the model, handles CORS, and creates the `/predict` endpoint. It also logs every prediction to `prediction_log.csv`.
-* **`check_drift.py`**: (Module 11) The monitoring script. It compares `prediction_log.csv` against the original training data to detect model drift.
-* **`Dockerfile`**: (Module 6) The blueprint to package the entire FastAPI application into a portable Docker container.
-* **`requirements.txt`**: A list of all Python libraries needed for the project.
+Logs all predictions into prediction_log.csv
 
----
+Provides Swagger docs at /docs
 
-## ⚙️ How to Run This Project (Step-by-Step)
+It does not include:
 
-Follow these steps exactly to get the backend server running.
+Drift detection
 
-### 1. Set Up the Environment
+Kafka streaming
 
-First, clone the repository and set up the Python virtual environment.
+Feedback training loop
 
-```bash
-# Clone the repo (if you haven't)
-# git clone ...
+You send a JSON request and get a clean JSON response.
 
-# Create a virtual environment
-python -m venv .venv
 
-# Activate it (on Mac/Linux)
-source .venv/bin/activate
-# (on Windows, use: .\.venv\Scripts\activate)
 
-# Install all required libraries
-pip install -r requirements.txt
+train-hybrid.py (Hybrid Training Pipeline)
 
-2. Train the Model
-You must run the training script first. This creates the phishing_model.joblib and model_columns.joblib files that the API needs.
+This script trains the hybrid phishing model using two datasets:
 
-python train.py
+UCI Website Dataset (numerical)
 
-3. Build the Docker Container
-Make sure you have Docker Desktop installed and running. This command builds your application "image".
+Phishing Email Dataset (text → numerical features)
 
-docker build -t phishing-api .
+Major steps:
 
-4. Run the API Server
-This command starts your API, which will run at http://127.0.0.1:8000. This container must be running for the frontend to work.
+Load UCI dataset using ucimlrepo
 
-docker run -p 8000:8000 phishing-api
+Load phishing_email.csv from data/
 
----
+Extract features from email text (length, URLs, urgency, uppercase ratio, keywords, etc.)
 
-## 🔬 How to Check for Model Drift (Module 7 & 11)
+Normalize email features using StandardScaler
 
-This project logs every prediction to a file *inside* the Docker container. You can run a script to check if this new data has "drifted" from the original training data.
+Convert values into -1, 0, 1 buckets to match UCI dataset scale
 
-1.  Run the API: Make sure your Docker container is running.
-    
-    docker run -p 8000:8000 phishing-api
+Add a source_website indicator column
 
-2.  Generate Log Data: Go to the frontend website (at `http://localhost:3000`) and click the test buttons 5-10 times to generate some prediction logs.
+Combine both datasets into one hybrid dataset
 
-3.  Find Container ID: Open a new terminal and find the ID of your running container.
-    
-    docker ps
-  
-    (Look for the ID next to the `phishing-api` name).
+Train three ML models:
 
-4.  Copy the Log File Out: Use this command to copy the log file from the container to your computer. Replace `YOUR_CONTAINER_ID` with the ID you just found.
-    
-    docker cp YOUR_CONTAINER_ID:/app/prediction_log.csv .
+Logistic Regression
 
-5.  Run the Drift Script: Now that the file is on your computer, run the drift check script.
-    ```bash
-    python check_drift.py
-    ```
+Random Forest
 
-You will see a report in your terminal that compares the statistics of the new data to the original data and warns you if drift is detected.
+Gradient Boosting
+
+Select best model based on accuracy
+
+Save:
+
+phishing_model.joblib
+
+model_columns.joblib
+
+email_scaler.joblib
+
+The training script originally used MLflow, but MLflow was removed from Docker because it caused installation failures. It is still present for GitHub Actions usage only.
+
+
+
+.github/workflows/ci.yml (CI/CD Pipeline)
+
+This file creates a full automation pipeline that runs on every push to main.
+
+Pipeline steps:
+
+Checkout repository
+
+Print folder debug tree
+
+Install dependencies
+
+Run pytest tests
+
+Download phishing_email.csv from GitHub Releases
+
+Run train-hybrid.py
+
+Upload the trained model as an artifact
+
+Build Docker Image
+
+Login to Docker Hub
+
+Push image to Docker Hub
+
+Notes:
+
+mlflow must remain in requirements.txt for GitHub Actions to work.
+
+mlflow must be removed when building Docker locally.
+
+To run the CI/CD pipelines , run these commands:
+git add .
+git commit -m "update"
+git push origin main
+
+Once this is done Github reads the .yml file and triggers the CI/CD pipeline steps
+
+
+
+3. Commands Used During Development
+Running tests
+
+pytest -v
+
+Run backend locally 
+
+uvicorn main_email:app --reload --port 8000
+
+Rebuilding Docker image
+
+docker build -t joteena/phishing-api:latest .
+
+Running Docker container
+
+docker run -p 8000:8000 joteena/phishing-api:latest
+
+Sending request to Docker
+
+curl -X POST "http://localhost:8000/predict/email" \
+     -H "Content-Type: application/json" \
+     -d '{"email_text": "Congratulations, you won a free iPhone."}'
+
+
+4. GitHub Actions Notes
+
+To make GitHub Actions succeed:
+
+Keep mlflow in requirements.txt
+
+The pipeline downloads the dataset from:
+https://github.com/T490-hue/phishing-backend/releases/download/v1.0.0/phishing_email.csv
+
+
+5. Running the API
+
+Once Docker container starts:
+
+Swagger documentation is available at
+http://localhost:8000/docs
+
+
+6. Output Example
+
+POST /predict/email
+Input:
+
+{
+  "email_text": "Your account is suspended. Click here to verify."
+}
+
+
+Output:
+
+{
+  "prediction": "Phishing",
+  "confidence": "0.9821",
+  "is_phishing": 1,
+  "input_type": "email",
+  "analysis": {
+      "suspicious_keywords_found": 4,
+      "urls_found": 1,
+      "urgency_indicators": 1,
+      "financial_terms": 0,
+      "has_generic_greeting": false
+  }
+}
+7. Summary
+
+You built a full hybrid phishing detection system that:
+
+Combines two datasets (website + email)
+
+Extracts text-based phishing indicators
+
+Normalizes email features to match UCI dataset
+
+Trains a unified machine learning model
+
+Deploys using FastAPI
+
+Automates training and Docker image creation using GitHub Actions
+
+Serves predictions through a Dockerized API
