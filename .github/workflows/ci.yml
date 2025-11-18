@@ -64,11 +64,18 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install httpx
-
+	
     - name: Download phishing dataset (Google Drive)
-      run: |
-        mkdir -p data
-        wget -O data/phishing_email.csv "https://drive.google.com/uc?export=download&id=1q96HI25w564BpVhJQyWF3IH-WUwdjSws"
+  run: |
+    mkdir -p data
+    FILEID="1q96HI25w564BpVhJQyWF3IH-WUwdjSws"
+    FILENAME="phishing_email.csv"
+    CONFIRM=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies \
+        "https://docs.google.com/uc?export=download&id=${FILEID}" -O- | \
+        sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1/p')
+    wget --load-cookies /tmp/cookies.txt \
+        "https://docs.google.com/uc?export=download&confirm=${CONFIRM}&id=${FILEID}" \
+        -O "data/${FILENAME}"
 
     - name: Train hybrid phishing model
       run: python train-hybrid.py
