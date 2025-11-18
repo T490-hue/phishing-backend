@@ -84,7 +84,7 @@ jobs:
 
     # 🔥 UPLOAD TRAINED MODEL ARTIFACT
     - name: Upload model artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: phishing_model
         path: phishing_model.joblib
